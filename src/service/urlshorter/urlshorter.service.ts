@@ -59,7 +59,7 @@ export class UrlshorterService {
   decode(id: string) {
     const item: number = this.urls.findIndex((item) => item.id === id);
 
-    if (!item) {
+    if (!item && item != 0) {
       throw new NotFoundException('Invalid ID.');
     }
 
