@@ -3,14 +3,21 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 import { UrlShorter } from 'src/entity/urlshorter.entity';
 
 @Injectable()
 export class UrlshorterService {
-  private urls: UrlShorter[] = [];
+  constructor(
+    @InjectModel('UrlShorter')
+    private readonly urlshorterModel: Model<UrlShorter>,
+  ) {}
 
-  encode(url: string) {
+  // private urls: UrlShorter[] = [];
+
+  async encode(url: string) {
     //Error First Methodology
     //Check if URL is provided, if not Exception is thrown
     if (!url) {
@@ -45,24 +52,37 @@ export class UrlshorterService {
 
     const newUrl = url.charAt(12) + url.charAt(13) + '.sh/' + outString;
 
-    const urlshortened = {
-      id: outString,
-      url: url,
-      newUrl: newUrl,
-    };
+    const urlshortened = new this.urlshorterModel({
+      url,
+      newUrl,
+    });
 
-    this.urls.push(urlshortened);
+    const result = await urlshortened.save();
 
-    return urlshortened;
+    return result;
+
+    // this.urls.push(urlshortened);
+
+    // return urlshortened;
   }
 
-  decode(id: string) {
-    const item: number = this.urls.findIndex((item) => item.id === id);
+  async decode(id: string) {
+    const url = await this.findUrl(id);
+    return url;
+  }
 
-    if (!item && item != 0) {
-      throw new NotFoundException('Invalid ID.');
+  private async findUrl(id: string): Promise<UrlShorter> {
+    let urlshort;
+    try {
+      urlshort = await this.urlshorterModel.findById(id).exec();
+    } catch (error) {
+      throw new NotFoundException('Could not find url.');
     }
 
-    return this.urls[item];
+    if (!urlshort) {
+      throw new NotFoundException('Could not find url.');
+    }
+
+    return urlshort;
   }
 }
